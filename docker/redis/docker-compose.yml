@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: redis:7.0.2
+    hostname: redis
+    #restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - redis-network
+
+      
+networks:
+  redis-network:
+    name: redisteste
+    driver: bridge
