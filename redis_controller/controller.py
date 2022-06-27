@@ -1,12 +1,10 @@
-import ast
 import csv
 import json
-from datetime import datetime
 import redis as redis
+import subprocess as sp
 
-#import sys
-#sys.path.insert(0, '/home/ads/Documents/avaliacao-desempenho')
-#export PYTHONPATH='/home/ads/Documents/avaliacao-desempenho'
+from datetime import timedelta, datetime
+from timeit import default_timer as timer
 
 from etl.processar import transform_message, extract_messages
 
@@ -19,15 +17,63 @@ def carga_dados(total: int, lote: int):
         redis.rpush('queue:fd', json.dumps(r))
 
 
-def processar_dados():
+def cenario_a(iteracao, lista):
+    print('Iniciando carga de dados')
+    start = timer()
+
+    with open('../logs/redis/cenario_a.csv', 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f, delimiter=';')
+        # output = sp.getoutput('docker stats --format "{{.Name}}; {{.MemUsage}}" --no-stream')
+        # writer.writerow([iteracao, datetime.now().strftime("%d/%m/%Y %H:%M:%S"), output])
+
+        for item in lista:
+            qnt_dados = item[0]
+            lote = item[1]
+
+            carga_dados(qnt_dados, lote)
+            output = sp.getoutput('docker stats --format "{{.Name}}; {{.MemUsage}}" --no-stream')
+            output_split = output.split(";")
+            writer.writerow([iteracao, datetime.now().strftime("%d/%m/%Y %H:%M:%S"), str(output_split[0]), str(output_split[1])])
+            print('Iteracao: {} / Lote de Dados: {}'.format(iteracao, lote), end='\r')
+
+    end = timer()
+    print('Carga concluída!: {tempo}'.format(tempo=timedelta(seconds=end - start)))
+
+
+def cenario_b(iteracao):
+    total = 0
+    processar = True
+    tempo_processar_ini = None
+
+    # Inicia processamento dos dados
+    while processar != None:
+        processar = _processar_dados()
+        if not tempo_processar_ini:
+            tempo_processar_ini = processar['date_send']
+        total = total + 1
+        print('Iteracao: {} / Dados: {}'.format(iteracao, total), end='\r')
+
+    # Gera arquivo
+    tempo_processar_fim = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    with open('../logs/redis/cenario_b.csv', 'a', encoding='UTF8', newline='') as f:
+        writer = csv.writer(f, delimiter=';')
+
+        # Intervalo de entrada e saida da fila
+        time_1 = datetime.strptime(tempo_processar_ini, '%Y-%m-%d %H:%M:%S')
+        time_2 = datetime.strptime(tempo_processar_fim, '%Y-%m-%d %H:%M:%S')
+        intervalo_entrada_saida_fila = time_2 - time_1
+
+        # ITERACAO, DATA ENTRADA FILA, DATA SAIDA DA FILA, INTERVALO DE ENTRADA E SAIDA DA FILA
+        row = [iteracao, tempo_processar_ini, tempo_processar_fim, intervalo_entrada_saida_fila.total_seconds()]
+        writer.writerow(row)
+
+
+def _processar_dados():
     packed = redis.blpop(['queue:fd'], 30)
     if not packed:
-        return
+        return None
+
     dict_str = packed[1].decode("UTF-8")
-    #retorno_dict = ast.literal_eval(dict_str)
     retorno = transform_message(dict_str)
-    if retorno:
-        with open('../logs/redis_processo.log', 'a', encoding='UTF8', newline='') as f:
-            writer = csv.writer(f, delimiter=';')
-            row = [retorno['id'], retorno['lote'], retorno['date_send'], datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')]
-            writer.writerow(row)
+    return retorno

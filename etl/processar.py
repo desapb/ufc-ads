@@ -80,7 +80,7 @@ def extract_messages(total: int, lote: int):
                 'id_group': row[4],
                 'media_url': row[5],
                 'media_type': row[6],
-                'date_send': datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'date_send': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 'lote': lote
             }
 

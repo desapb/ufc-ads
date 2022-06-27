@@ -1,35 +1,24 @@
-from controller import carga_dados
-from datetime import timedelta, datetime
-from timeit import default_timer as timer
+import os
+import sys
+from time import sleep
+
+from controller import cenario_a
+
 
 if __name__ == '__main__':
-    start = timer()
-    data_hora_atual = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    total_iteracao = int(sys.argv[1])
 
-    #carga_dados(59970, 0)
-    #carga_dados(26470, 1)
-    #carga_dados(11860, 2)
-    #carga_dados(8940, 3)
-    #carga_dados(13370, 4)
-    #carga_dados(36070, 5)
-    #carga_dados(69760, 6)
-    #carga_dados(94120, 7)
-    #carga_dados(106790, 8)
-    #carga_dados(127260, 9)
-    #carga_dados(133540, 10)
-    #carga_dados(156410, 11)
-    #carga_dados(158880, 12)
-    #carga_dados(140640, 13)
-    #carga_dados(129040, 14)
-    #carga_dados(136170, 15)
-    #carga_dados(150140, 16)
-    #carga_dados(161370, 17)
-    #carga_dados(195860, 18)
-    #carga_dados(215090, 19)
-    carga_dados(215360, 20)
-    #carga_dados(188960, 21)
-    #carga_dados(172990, 22)
-    #carga_dados(116950, 23)
+    lista = [(17991, 0), (7941, 1), (3558, 2), (2682, 3), (4011, 4), (10821, 5), (10821, 6), (28236, 7), (32037, 8),
+             (38178, 9), (40062, 10), (46923, 11), (47664, 12), (42192, 13), (38712, 14), (40851, 15), (45042, 16),
+             (48411, 17), (58758, 18), (64527, 19), (64608, 20), (56688, 21), (51897, 22), (35085, 23)]
 
-    end = timer()
-    print('Carga concluída!: {tempo}'.format(tempo=timedelta(seconds=end - start)))
+    for it in range(total_iteracao):
+        print('Iniciando iteração: {}'.format(it))
+        print('Reiniciando docker')
+        os.system('docker-compose -f ../docker/redis/docker-compose.yml down')
+        os.system('docker-compose -f ../docker/redis/docker-compose.yml up -d')
+        sleep(5)
+        cenario_a(it, lista)
+
+    os.system('docker-compose -f ../docker/redis/docker-compose.yml down')
+    print('Fim da carga!')
